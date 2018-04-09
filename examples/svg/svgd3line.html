@@ -1,0 +1,31 @@
+<html>
+<header>
+</header>
+<body>
+<svg id="container" width="600px" height="200px">
+</svg>
+<script src="../../d3.min.js" charset="UTF-8"></script>
+<script>
+	var data = [
+	{x:0,y:0},
+	{x:50,y:160},
+	{x:100,y:180},
+	{x:150,y:130},
+	{x:200,y:190},
+	{x:250,y:170}
+	];
+	//用svg+d3path绘制折线图
+	const line = d3.line()//d3 从4开始不再使用svg.line函数
+	    .x((d)=>d.x)
+		.y((d)=>200-d.y)
+		.curve(d3.curveBasis);//指定展现方式返回数据，有linear/basis/cardinal，折线、平滑曲线、阶梯线
+	//绘制
+	d3.select("#container").append("path")
+	  .attr("stroke-with","3")
+	  .attr("fill","none")
+	  .attr("stroke","#ff0000")
+	  .attr("d",line(data));
+	 
+</script>
+</body>
+</html>

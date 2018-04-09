@@ -1,0 +1,33 @@
+<html>
+<header>
+</header>
+<body>
+<div id="add">
+<ul></ul></div>
+<div id="remove">
+<ul>
+<li></li>
+<li></li>
+<li></li>
+<li></li>
+<li></li>
+</ul>
+</div>
+<script src="../../d3.min.js" charset="UTF-8"></script>
+<script>
+	var data = ["1","2","3"];
+	//添加数据>选择元素
+	d3.select("#add").select("ul").selectAll("li")
+	  .data(data)
+	  .enter()
+	  .append("li")
+	  .style("color",(d)=> "#ff0000");
+	//删除数据<选择元素，删除元素
+	d3.select("#remove").select("ul").selectAll("li")
+	  .data(data)
+	  .exit()
+	  .remove("li")
+	  .style("color",(d) => "#0000ff");
+</script>
+</body>
+</html>

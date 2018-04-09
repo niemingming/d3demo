@@ -1,0 +1,65 @@
+<html>
+<header>
+<style>
+.arc text {
+  font: 10px sans-serif;
+  text-anchor: middle;
+}
+
+.arc path {
+  stroke: #fff;
+}
+
+</style>
+</header>
+<body>
+<svg height="400" width="960" id="container"></svg>
+<script src="../../d3.min.js" charset="UTF-8"></script>
+<script>
+//获取svg图，计算半径
+var svg = d3.select("#container");
+	height = +svg.attr("height");
+	width = +svg.attr("width");
+	radius = Math.min(height,width)/2;
+	g = svg.append("g").attr("transform","translate(" + width/2 + "," + height/2 + ")");
+var color = ["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"];
+var data = [
+{label:"first",value:89},
+{label:"second",value:66},
+{label:"three",value:46},
+{label:"four",value:79},
+{label:"five",value:43}
+];
+//构建饼图
+var pie = d3.pie()
+   .sort(null)
+   .value((d)=> d.value);//这里传入数据pie(data)后，就形成了svg需要的图形数据格式。
+//路径函数
+var path = d3.arc()
+   .outerRadius(radius - 10)
+   .innerRadius(0);//表示扇形，不是环形，在设置了startAngle和endAngle就画好了。
+//标签
+var label = d3.arc()
+    .outerRadius(radius - 40)
+	.innerRadius(radius - 40);
+//加载数据并构建
+var arcs = g.selectAll(".arc")
+     .data(pie(data))
+	 .enter()
+	 .append("g")
+	 .attr("class","arc");
+//绑定数据并绘制path
+arcs.append("path")
+    .attr("d",path)//属性设置可以是直接的赋值，也可以是函数，函数会传入绑定的数据data
+	.attr("fill",(d,i)=> color[i]);
+//设置label
+arcs.append("text")
+   .attr("transform",function(d){ 
+   return "translate("+label.centroid(d)+")"})
+   .attr("dy","0.35em")
+   .text((d)=>d.data.label);
+	
+   
+</script>
+</body>
+</html>
