@@ -5,8 +5,33 @@
 <body>
 <canvas id="qipan" width="440" height="440" style="margin-left:10px;"></canvas>
 <img src="qizi1.png" id="qizi" />
+<div>
+	<button id="pm" onclick="setMod()">人机</button>
+	<button id="pp" onclick="setMod()">双人</button>	
+</div>
 </body>
 <script>
+var mod = "pm"//默认为人机
+	player1 = "m",//玩家1默认为机器
+	player2 = "p",//玩家2默认为人
+	mstate = 1,//机器的默认状态为黑棋后期考虑为白棋的情况
+	pstate = 2,
+	end = true;//未开始
+//设置开始下棋
+function setMod(){
+	mod = event.target.id;
+	end = false;
+	if(mod == 'pm'){
+		player1 = "m";
+		player2 = "p";
+		machineStep();//由机器走一步
+	}else {
+		player1 = "p";
+		player2 = "p";
+	}
+	drawQipan();
+}	
+
 var canvas = document.getElementById("qipan");
 var context = canvas.getContext("2d");
 var image = document.getElementById("qizi");
@@ -14,28 +39,43 @@ image.style.display = "none";
 var points = [];//记录棋盘当前状态。
 //记录当前下棋状态
 var current = 1;//默认黑子先下。
+	currplayer = player1;
 
 image.onload = function(){//资源加载后绘制棋盘
 	drawQipan();	
 };
 //添加事件
 canvas.onclick = function(event){
+	if(end||currplayer == "m"){
+		return;
+	}
+	
 	var x = event.offsetX;
 	var y = event.offsetY;
 	//鼠标点击位置。
 	var p = calculatePoint(x,y);
 	if(p){
 		if(p.drawQZ(context,current)){
-			current = (current+1)%2;
-			if(current == 0){
-				current = 2;
-			}
-			checkResult(p);
+			updateRes(p);
 		}else {
 			alert("不合法的落子")
 		}
 	}
+}
+//更新落子
+function updateRes(p){
+	current = (current+1)%2;
+	if(current == 0){
+		current = 2;
+		currplayer = player1;
+	}else{
+		currplayer = player2;
+	}
+	if(currplayer == "m"){//机器下棋
+		machineStep();
+	}
 	
+	checkResult(p);
 }
 
 //判断这个落子结果
@@ -44,26 +84,26 @@ function checkResult(p){
 	//横向
 	var res = calculateRes(p,1,0);
 	if(res >= 5) {
-		alert(state == 1 ? "黑方获胜":"白方获胜");
-		drawQipan();
+		context.fillText(state == 1 ? "黑方获胜":"白方获胜",20,10);
+		end = true;
 	}
 	//纵向
 	var res = calculateRes(p,0,1);
 	if(res >= 5) {
-		alert(state == 1 ? "黑方获胜":"白方获胜");
-		drawQipan();
+		context.fillText(state == 1 ? "黑方获胜":"白方获胜",20,10);
+		end = true;
 	}
 	//右斜
 	var res = calculateRes(p,1,1);
 	if(res >= 5) {
-		alert(state == 1 ? "黑方获胜":"白方获胜");
-		drawQipan();
+		context.fillText(state == 1 ? "黑方获胜":"白方获胜",20,10);
+		end = true;
 	}
 	
 	var res = calculateRes(p,1,-1);
 	if(res >= 5) {
-		alert(state == 1 ? "黑方获胜":"白方获胜");
-		drawQipan();
+		context.fillText(state == 1 ? "黑方获胜":"白方获胜",20,10);
+		end = true;
 	}
 }
 function calculateRes(p,x,y){
@@ -91,6 +131,158 @@ function calculatePoint(x,y){
 	var i = Math.round((x-20)/30);
 	var j = Math.round((y-20)/30);
 	return points[j][i];
+}
+//机器走棋
+function machineStep(){
+	var p = calculateMachineStep();//计算电脑的落子位置
+}
+//计算电脑的落子位置。
+function calculateMachineStep(){
+	var maxscore = 0,//落子分值
+	   maxpoints = [];//获得最大分值的落子。
+	//遍历当前棋盘获取最大得分落子
+	for(var i = 0; i < points.length; i++ ){
+		var rows = points[i];
+		for(var j = 0; j < rows.length; j++){
+			var p = rows[j];
+			if(p.state != 0){//不可落子
+				continue;
+			}
+			var score = calculateScore(p);
+		}
+	}
+}
+//计算落子得分
+//各方向可以形成的有 成5 、活4、死4、活3、死3、跳3、活2、死2、活1、死1
+function calculateScore(p){
+	var hstate = calculateFXState(1,0,p)//横向计算
+	
+}
+//计算某一方向的状态
+function calculateFXState(x,y,p){
+	//首先获取连续个数。需要排序
+	var total = 1,ys = 1,jx=true,ps=[p];
+	while(jx){
+		jx=false
+		var nx1 = p.i + x*ys;
+		var ny1 = p.j + y*ys;
+		if(nx1 >= 0 && nx1 <= 14&&ny1 >=0&&ny1 <=14&&points[nx1][ny1].state == mstate){
+			total++;
+			jx = true;
+			ps.push(points[nx1][ny1]);//结尾追加
+		}
+		var nx2 = p.i + x*ys*-1;
+		var ny2 = p.j + y*ys*-1;
+		if(nx2 >= 0 && nx2 <= 14&&ny2 >=0&&ny2 <=14&&points[nx2][ny2].state == mstate){
+			total++;
+			jx = true;
+			ps.unshift(points[nx2][ny2]);
+		}
+		ys++;
+	}
+	if(ps.length >= 5){
+		return "H5";//活5
+	}
+	if(ps.length == 4){//必成活4或者死4或者死棋，即这个方向无意义
+		var htotal = 0;
+		var nx = ps[0].i - x,ny = ps[0].j - y;//反向取值
+		if(points[nx]&&points[nx][ny]&&points[nx][ny].state==0){
+			htotal++;
+		}
+		nx = ps[ps.length-1].i + x,ny = ps[ps.length-1].j + y;//正向取值
+		if(points[nx]&&points[nx][ny]&&points[nx][ny].state==0){
+			htotal++;
+		}
+		if(htotal == 2){//活4
+			return "H4";
+		}else if(htotal == 1){
+			return "S4";//一边被堵
+		}else{
+			return "S1";//无意义的棋子
+		}
+	}
+	if(ps.length ==3){//活3，死3，死棋，不需要判断跳3即。。。*。的情况,3连需要考虑两边延伸两个棋子
+		var htotal = 0;
+		var nx = ps[ps.length-1].i + x,ny = ps[ps.length-1].j + y;
+		var zx1 = points[nx]? points[nx][ny]:null;//正向1
+		nx = ps[ps.length-1].i + 2*x,ny = ps[ps.length-1].j + 2*y;
+		var zx2 = points[nx]? points[nx][ny]:null;
+		nx = ps[0].i - x,ny = ps[0].j - y;
+		var fx1 = points[nx]? points[nx][ny]:null;
+		nx = ps[0].i - 2*x,ny = ps[0].j - 2*y;
+		var fx2 = points[nx]? points[nx][ny]:null;
+		if(zx1&&zx1.state == 0&&zx2&&zx2.state==0
+			&&fx1&&fx1.state==0&&fx2&&fx2.state==0){//四个空白位
+				return "H3";
+		}
+		if(zx1&&zx1.state == 0&&zx2&&zx2.state==mstate
+			&&fx1&&fx1.state==0&&fx2&&fx2.state==mstate){//2个空白位,2个机器位
+				return "H4";
+		}
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==mstate||fx2&&fx2.state==mstate)
+			&&fx1&&fx1.state==0){//2个空白位,一个机器位
+				return "S4";
+		}
+		if(zx1&&zx1.state == 0&&(!zx2||zx2.state==pstate)
+			&&fx1&&fx1.state==0&&(!fx2||fx2.state==pstate)){//2个空白位
+				return "S3";
+		}
+		if((!zx1||zx1.state==pstate)&&&&fx1&&fx1.state==0&&fx2&&fx2.state==0){
+			return "S3";
+		}
+		if((!fx1||fx1.state==pstate)&&&&zx1&&zx1.state==0&&zx2&&zx2.state==0){
+			return "S3";
+		}
+		return "S1";
+	}
+	if(ps.length == 2){//如果活2，死2，死1，跳3
+		var nx = ps[ps.length-1].i + x,ny = ps[ps.length-1].j + y;
+		var zx1 = points[nx]? points[nx][ny]:null;//正向1
+		nx = ps[ps.length-1].i + 2*x,ny = ps[ps.length-1].j + 2*y;
+		var zx2 = points[nx]? points[nx][ny]:null;
+		nx = ps[ps.length-1].i + 3*x,ny = ps[ps.length-1].j + 3*y;
+		var zx3 = points[nx]? points[nx][ny]:null;
+		nx = ps[0].i - x,ny = ps[0].j - y;
+		var fx1 = points[nx]? points[nx][ny]:null;
+		nx = ps[0].i - 2*x,ny = ps[0].j - 2*y;
+		var fx2 = points[nx]? points[nx][ny]:null;
+		nx = ps[0].i - 3*x,ny = ps[0].j - 3*y;
+		var fx3 = points[nx]? points[nx][ny]:null;
+		//两边各有两个空
+		if(zx1&&zx1.state == 0&&zx2&&zx2.state==0
+			&&fx1&&fx1.state==0&&fx2&&fx2.state==0){//四个空白位
+				return "H2";
+		}
+		//两边各隔了个空有两个机器
+		if(zx1&&zx1.state == 0&&zx2&&zx2.state==mstate&&zx3&&zx3.state==mstate
+			&&fx1&&fx1.state==0&&fx2&&fx2.state==mstate&&fx3&&fx3.state==mstate){//四个空白位
+				return "H4";
+		}
+		//只有一边
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==mstate&&zx3&&zx3.state==mstate||fx2&&fx2.state==mstate&&fx3&&fx3.state==mstate)
+			&&fx1&&fx1.state==0){//四个空白位
+				return "S4";
+		}
+		//只有一个
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==mstate&&zx3&&zx3.state==0||fx2&&fx2.state==mstate&&fx3&&fx3.state==0)
+			&&fx1&&fx1.state==0){//四个空白位
+				return "T3";//跳3
+		}
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==mstate&&zx3&&zx3.state==pstate||fx2&&fx2.state==mstate&&fx3&&fx3.state==pstate)
+			&&fx1&&fx1.state==0){//四个空白位
+				return "S3";
+		}
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==0||fx2&&fx2.state==0)
+			&&fx1&&fx1.state==0){//四个空白位
+				return "H2";
+		}
+		return "S1";
+	}
+	if(ps.length == 1){//孤立节点
+		
+	}
+	
+	
 }
 
 //棋子点数坐标,state:0 未落子，1黑子，2白子
