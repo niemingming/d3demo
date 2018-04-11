@@ -1,0 +1,151 @@
+<html>
+<header>
+<title>五子棋</title>
+</header>
+<body>
+<canvas id="qipan" width="440" height="440" style="margin-left:10px;"></canvas>
+<img src="qizi1.png" id="qizi" />
+</body>
+<script>
+var canvas = document.getElementById("qipan");
+var context = canvas.getContext("2d");
+var image = document.getElementById("qizi");
+image.style.display = "none";
+var points = [];//记录棋盘当前状态。
+//记录当前下棋状态
+var current = 1;//默认黑子先下。
+
+image.onload = function(){//资源加载后绘制棋盘
+	drawQipan();	
+};
+//添加事件
+canvas.onclick = function(event){
+	var x = event.offsetX;
+	var y = event.offsetY;
+	//鼠标点击位置。
+	var p = calculatePoint(x,y);
+	if(p){
+		if(p.drawQZ(context,current)){
+			current = (current+1)%2;
+			if(current == 0){
+				current = 2;
+			}
+			checkResult(p);
+		}else {
+			alert("不合法的落子")
+		}
+	}
+	
+}
+
+//判断这个落子结果
+function checkResult(p){
+	var state = p.state;
+	//横向
+	var res = calculateRes(p,1,0);
+	if(res >= 5) {
+		alert(state == 1 ? "黑方获胜":"白方获胜");
+		drawQipan();
+	}
+	//纵向
+	var res = calculateRes(p,0,1);
+	if(res >= 5) {
+		alert(state == 1 ? "黑方获胜":"白方获胜");
+		drawQipan();
+	}
+	//右斜
+	var res = calculateRes(p,1,1);
+	if(res >= 5) {
+		alert(state == 1 ? "黑方获胜":"白方获胜");
+		drawQipan();
+	}
+	
+	var res = calculateRes(p,1,-1);
+	if(res >= 5) {
+		alert(state == 1 ? "黑方获胜":"白方获胜");
+		drawQipan();
+	}
+}
+function calculateRes(p,x,y){
+	var total = 1,ys=1,jx=true,state = p.state;
+	while(jx){
+		jx=false
+		var nx1 = p.i + x*ys;
+		var ny1 = p.j + y*ys;
+		if(nx1 >= 0 && nx1 <= 14&&ny1 >=0&&ny1 <=14&&points[nx1][ny1].state == state){
+			total++;
+			jx = true;
+		}
+		var nx2 = p.i + x*ys*-1;
+		var ny2 = p.j + y*ys*-1;
+		if(nx2 >= 0 && nx2 <= 14&&ny2 >=0&&ny2 <=14&&points[nx2][ny2].state == state){
+			total++;
+			jx = true;
+		}
+		ys++;
+	}
+	return total;
+}
+//计算点位
+function calculatePoint(x,y){
+	var i = Math.round((x-20)/30);
+	var j = Math.round((y-20)/30);
+	return points[j][i];
+}
+
+//棋子点数坐标,state:0 未落子，1黑子，2白子
+var point = function (x,y,i,j){
+	this.x = x;
+	this.y = y;
+	this.i = i;
+	this.j = j;
+	this.state = 0;
+	var me = this;
+	//在该点落子
+	this.drawQZ = function(context,state){
+		if(me.state != 0){
+			return false;
+		}
+		if(state == 1){//黑子
+			context.drawImage(image,35,0,30,30,me.x - 12,me.y - 13,30,30);
+			me.state = state;
+			return true;
+		}
+		if(state ==2){//白子
+			context.drawImage(image,0,0,30,30,me.x - 12,me.y - 13,30,30);
+			me.state = state;
+			return true;
+		}
+	};
+};
+
+//绘制棋盘
+function drawQipan(){
+	//清空内容
+	context.clearRect(0,0,440,440);
+	current = 1;
+	//设置填充色
+	context.fillStyle="#EF8801";
+	context.fillRect(20,20,440,440);
+	context.lineWidth = 1;
+	//绘制棋盘
+	var width = 420/14;
+	var begin = 20;
+	for(var i = 0; i < 15; i++){
+		context.moveTo(begin + width*i,begin);
+		context.lineTo(begin+width*i,440);
+		context.moveTo(begin,begin+width*i);
+		context.lineTo(440,begin+width*i);
+		var cols = [];
+		points[i] = cols;
+		for(var j = 0; j < 15;j++){
+			cols[j] = new point(begin + width*j,begin+width*i,i,j);
+		}
+		
+	}
+	context.stroke();
+}
+
+
+</script>
+</html>

@@ -51,7 +51,15 @@ var arcs = g.selectAll(".arc")
 //绑定数据并绘制path
 arcs.append("path")
     .attr("d",path)//属性设置可以是直接的赋值，也可以是函数，函数会传入绑定的数据data
-	.attr("fill",(d,i)=> color[i]);
+	.attr("fill",(d,i)=> color[i])
+	.on("mouseover",(d,i)=>{//添加事件
+		d3.select(event.target)
+		  .attr("fill","#ff0000")
+	})
+	.on("mouseout",(d,i)=>{
+		d3.select(event.target)
+		  .attr("fill",color[i])
+	});
 //设置label
 arcs.append("text")
    .attr("transform",function(d){ 
