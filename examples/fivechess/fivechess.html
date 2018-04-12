@@ -75,7 +75,7 @@ function updateRes(p){
 	}
 	step++;
 	checkResult(p);
-	if(currplayer == "m"){//机器下棋
+	if(currplayer == "m"&&!end){//机器下棋
 		machineStep();
 	}
 }
@@ -133,13 +133,18 @@ function calculateRes(p,x,y){
 			total++;
 			jx = true;
 		}
-		var nx2 = p.i + x*ys*-1;
-		var ny2 = p.j + y*ys*-1;
+		ys++;
+	}
+	jx=true,ys=-1;
+	while(jx){
+		jx=false;
+		var nx2 = p.i + x*ys;
+		var ny2 = p.j + y*ys;
 		if(nx2 >= 0 && nx2 <= 14&&ny2 >=0&&ny2 <=14&&points[nx2][ny2].state == state){
 			total++;
 			jx = true;
 		}
-		ys++;
+		ys--;	
 	}
 	return total;
 }
@@ -184,6 +189,8 @@ function machineStep(){
 	//记录对方得分最高的得分
 	var dfmaxscore = 0;
 	var dfmaxpoints = [];
+	//获取优选估计点，增加电脑随机性
+	var goodpoints = [];
 	//遍历最高得分棋子，判断对方最高得分
 	for(var i = 0; i < maxpoints.length; i++){
 		//重置还原状态信息。
@@ -195,9 +202,7 @@ function machineStep(){
 		var dmaxscore = calculateMachineStep(dpoints,pstate,mstate);
 		if(maxscore >= dmaxscore){//如果我方得分之后，对手得分低于我方，我方进攻结束
 			maxpoints[i].state = 0;
-			maxpoints[i].drawQZ(context,current);
-			updateRes(maxpoints[i]);
-			return;
+			goodpoints.push(maxpoints[i]);
 		}else if(dmaxscore > dfmaxscore){
 			dfmaxscore = dmaxscore;
 			dfmaxpoints = dpoints;
@@ -205,8 +210,19 @@ function machineStep(){
 	}
 	//如果执行到这里说明我方都小于白方，找到白方得分最大点。
 	resetState(oldstates,oldcurrent);
+	//如果优选估计点，存在尝试，找出优选估计点。并要求优选估计点
+	if(goodpoints.length > 0){
+		//最优估计结果
+		console.log(maxscore+"-----" + dfmaxscore);
+		var index = Math.floor(Math.random()*goodpoints.length);
+		goodpoints[index].drawQZ(context,current);
+		updateRes(goodpoints[index]);
+		return;
+	}
+	//取最佳防守
 	var newmaxscore = 0,newmaxpoints = [];
 	//遍历白方落子点，作为黑方落子的得分。
+	/**/
 	for(var i = 0; i < dfmaxpoints.length; i++ ){
 		var score = calculateScore(dfmaxpoints[i],mstate,pstate);
 		if(score == 100000){//如果成5，不在考虑其他
@@ -220,12 +236,47 @@ function machineStep(){
 			newmaxpoints.push(dfmaxpoints[i]);
 		}
 	}
+	var minscore = 100000,minpoints = [];
+	//逻辑改为，遍历白方罗字典，找到黑方落子后白方得分最低的点。
+	for(var i = 0; i < dfmaxpoints.length; i++ ){
+		//重置还原状态信息。
+		resetState(oldstates,oldcurrent);
+		//修改当前点位状态
+		dfmaxpoints[i].state = mstate;
+		//计算对手得分
+		var dpoints = [];
+		var dmaxscore = calculateMachineStep(dpoints,pstate,mstate);
+		if(minscore > dmaxscore){//这个点防守效果更好
+			minscore = dmaxscore;
+			minpoints.splice(0,minpoints.length);
+			minpoints.push(dfmaxpoints[i]);
+		}else if(dmaxscore == minscore){
+			minpoints.push(dfmaxpoints[i]);
+		}
+	}
+	//找到两边都有的点，如果存在则为最优点
+	var bestpoints = [];
+	for(var i = 0; i < minpoints.length; i++){
+		var p = minpoints[i];
+		for(var j = 0; j < newmaxpoints.length; j++){
+			var p1 = newmaxpoints[j];
+			if(p.i==p1.i&&p.j==p1.j){
+				bestpoints.push(p);
+			}
+		}
+	}
+	if(bestpoints.length == 0){//如果没有，取最佳防守
+		bestpoints = minpoints;
+	}
+	//重置还原状态信息。
+	resetState(oldstates,oldcurrent);
+	console.log(newmaxscore + "-----" + dfmaxscore+"--------"+minscore)
 	//这时的newmaxpoints是近似排序的。
-	var index = Math.min(Math.round(newmaxpoints.length/2),newmaxpoints.length-1);
+	var index = Math.min(Math.round(bestpoints.length/2),bestpoints.length-1);
 	//落子在近似中心处
-	if(newmaxpoints[index]){
-		newmaxpoints[index].drawQZ(context,current);
-		updateRes(newmaxpoints[index]);
+	if(bestpoints[index]){
+		bestpoints[index].drawQZ(context,current);
+		updateRes(bestpoints[index]);
 	}
 }
 //重置尝试之前的信息
@@ -260,7 +311,7 @@ function calculateMachineStep(maxpoints,mstate,pstate){
 				continue;
 			}
 			var score = calculateScore(p,mstate,pstate);
-			console.log(p.i + "---" + p.j + "---" + score);
+			//console.log(p.i + "---" + p.j + "---" + score);
 			if(score == 100000){//如果成5，不在考虑其他
 				maxpoints.splice(0,maxpoints.length);
 				maxpoints.push(p);
@@ -290,9 +341,10 @@ function calculateScore(p,mstate,pstate){
 		"T3":6,
 		"H2":5,
 		"S3":4,
-		"H1":3,
-		"S2":2,
-		"S1":1
+		"T2":3,
+		"H1":2,
+		"S2":1,
+		"S1":0
 	};
 	var hstate = calculateFXState(1,0,p,mstate,pstate);//横向计算 H5:10,H4:9,H3:7,H2:5,H1:3,S4:8,S3:4,S2:2,S1:1,T3:6,
 	if(hstate == 'H5'){
@@ -320,11 +372,14 @@ function calculateScore(p,mstate,pstate){
 	if((qzs[3]==7||qzs[3]==6)&&(qzs[2]==7||qzs[2]==6)){//双活三
 		return 5000;
 	}
-	if((qzs[3]==7||qzs[3]==6)&&(qzs[2]==4)){//活三死三
+	if((qzs[3]==7)&&(qzs[2]==4)){//活三死三
 		return 1000;
 	}
 	if(qzs[3]==9){//死四
 		return 500;
+	}
+	if((qzs[3]==7)&&(qzs[2]==4)){//跳活三死三
+		return 450;
 	}
 	if(qzs[3]==8){//跳死四
 		return 400;
@@ -341,10 +396,16 @@ function calculateScore(p,mstate,pstate){
 	if(qzs[3] == 5){//单活二
 		return 10;
 	}
-	if(qzs[3] == 4){//死三
+	if(qzs[3] == 4&& qzs[2]==3 ){//死三跳二
+		return 7;
+	}
+	if(qzs[3] == 4 ){//死三
 		return 5;
 	}
-	if(qzs[3] == 3||qzs[3]==2){//死2，活1
+	if(qzs[3] == 3){//跳二
+		return 3;
+	}
+	if(qzs[3] == 2||qzs[3]==1){//死2，活1
 		return 2;
 	}
 	return 1;//死1	
@@ -362,15 +423,21 @@ function calculateFXState(x,y,p,mstate,pstate){
 			jx = true;
 			ps.push(points[nx1][ny1]);//结尾追加
 		}
-		var nx2 = p.i + x*ys*-1;
-		var ny2 = p.j + y*ys*-1;
-		if(nx2 >= 0 && nx2 <= 14&&ny2 >=0&&ny2 <=14&&points[nx2][ny2].state == mstate){
-			total++;
-			jx = true;
-			ps.unshift(points[nx2][ny2]);
-		}
 		ys++;
 	}
+	jx = true,ys=-1;
+	while(jx){
+		jx=false
+		var nx1 = p.i + x*ys;
+		var ny1 = p.j + y*ys;
+		if(nx1 >= 0 && nx1 <= 14&&ny1 >=0&&ny1 <=14&&points[nx1][ny1].state == mstate){
+			total++;
+			jx = true;
+			ps.unshift(points[nx1][ny1]);//开头
+		}
+		ys--;
+	}
+	
 	if(ps.length >= 5){
 		return "H5";//活5
 	}
@@ -410,8 +477,8 @@ function calculateFXState(x,y,p,mstate,pstate){
 	var fx4 = points[nx]? points[nx][ny]:null;
 	if(ps.length ==3){//活3，死3，死棋，不需要判断跳3即。。。*。的情况,3连需要考虑两边延伸两个棋子
 		
-		if(zx1&&zx1.state == 0&&zx2&&zx2.state==0
-			&&fx1&&fx1.state==0&&fx2&&fx2.state==0){//四个空白位
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==0||fx2&&fx2.state==0)
+			&&fx1&&fx1.state==0){//四个空白位
 				return "H3";
 		}
 		if(zx1&&zx1.state == 0&&zx2&&zx2.state==mstate
@@ -491,6 +558,11 @@ function calculateFXState(x,y,p,mstate,pstate){
 			||fx2&&fx2.state==mstate&&fx3&&fx3.state==mstate)
 			&&fx1&&fx1.state==0){//隔代成四
 				return "S3";
+		}
+		if(zx1&&zx1.state == 0&&(zx2&&zx2.state==mstate&&zx3&&zx3.state==0
+			||fx2&&fx2.state==mstate&&fx3&&fx3.state==0)
+			&&fx1&&fx1.state==0){//隔代成四
+				return "T2";
 		}
 		if(zx1&&zx1.state == 0
 			&&fx1&&fx1.state==0){//四个空白位
