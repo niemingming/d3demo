@@ -190,8 +190,9 @@ function machineStep(){
 	var dfmaxscore = 0;
 	var dfmaxpoints = [];
 	//获取优选估计点，增加电脑随机性
-	var goodpoints = [];
-	//遍历最高得分棋子，判断对方最高得分
+	var goodpoints = [];//找到得分最高，且防守最好的棋子
+	var maxcz = -1;
+	//遍历最高得分棋子，判断对方最高得分,
 	for(var i = 0; i < maxpoints.length; i++){
 		//重置还原状态信息。
 		resetState(oldstates,oldcurrent);
@@ -200,8 +201,11 @@ function machineStep(){
 		//计算对手得分
 		var dpoints = [];
 		var dmaxscore = calculateMachineStep(dpoints,pstate,mstate);
-		if(maxscore >= dmaxscore){//如果我方得分之后，对手得分低于我方，我方进攻结束
-			maxpoints[i].state = 0;
+		if(maxscore - dmaxscore > maxcz){//如果我方得分之后，对手得分低于我方，我方进攻结束
+			maxcz = maxscore - dmaxscore;
+			goodpoints.splice(0,goodpoints.length -  1);
+			goodpoints.push(maxpoints[i]);
+		}else if (maxscore - dmaxscore == maxcz){
 			goodpoints.push(maxpoints[i]);
 		}else if(dmaxscore > dfmaxscore){
 			dfmaxscore = dmaxscore;
@@ -212,6 +216,7 @@ function machineStep(){
 	resetState(oldstates,oldcurrent);
 	//如果优选估计点，存在尝试，找出优选估计点。并要求优选估计点
 	if(goodpoints.length > 0){
+		//进一步完善，优选结果应该是双方级别差值最大的值
 		//最优估计结果
 		console.log(maxscore+"-----" + dfmaxscore);
 		var index = Math.floor(Math.random()*goodpoints.length);
@@ -222,7 +227,6 @@ function machineStep(){
 	//取最佳防守
 	var newmaxscore = 0,newmaxpoints = [];
 	//遍历白方落子点，作为黑方落子的得分。
-	/**/
 	for(var i = 0; i < dfmaxpoints.length; i++ ){
 		var score = calculateScore(dfmaxpoints[i],mstate,pstate);
 		if(score == 100000){//如果成5，不在考虑其他
@@ -329,7 +333,7 @@ function calculateMachineStep(maxpoints,mstate,pstate){
 	return maxscore;
 }
 //计算落子得分
-//各方向可以形成的有 成5 、活4、跳4，死4、跳死4、活3、死3、跳3、活2、死2、活1、死1
+//各方向可以形成的有 成5 、活4、跳4，死4、跳死4、活3、死3、跳3、活2、死2、活1、死1，改为层次递加，用于判断形势差距。
 function calculateScore(p,mstate,pstate){
 	//分值
 	var qz = {
@@ -365,45 +369,47 @@ function calculateScore(p,mstate,pstate){
 	//有5直接返回。判断没有H5的情况。需要
 	var qzs = [qz[hstate],qz[vstate],qz[zxstate],qz[fxstate]];
 	qzs.sort(function(a,b){return a - b;});//排序
+	//计算合计，用于分值内估计，尽量找到最好值。
+	var sum = qzs[0] - 0 + qzs[1] +qzs[2] + qzs[3];
 	//取后两位判断
 	if(qzs[3] == 10||((qzs[3]==9||qzs[3]==8)&&(qzs[2]==9||qzs[2]==8||qzs[2]==7||qzs[2]==6))){//活四，双死四，死四活三
-		return 10000;
+		return 15;
 	}
 	if((qzs[3]==7||qzs[3]==6)&&(qzs[2]==7||qzs[2]==6)){//双活三
-		return 5000;
+		return 14;
 	}
 	if((qzs[3]==7)&&(qzs[2]==4)){//活三死三
-		return 1000;
+		return 13;
 	}
 	if(qzs[3]==9){//死四
-		return 500;
+		return 12;
 	}
 	if((qzs[3]==7)&&(qzs[2]==4)){//跳活三死三
-		return 450;
+		return 11;
 	}
-	if(qzs[3]==8){//跳死四
-		return 400;
+	if(qzs[3]==8){//跳死四,最大值是5
+		return 10 ;//+ (sum - 8)/16;
 	}
 	if(qzs[3]==7){//活三
-		return 100;
+		return 9 ;//+ (sum - 7)/16;
 	}
 	if(qzs[3]==6){//跳活
-		return 90;
+		return 8 ;//+ (sum - 6)/16;
 	}
 	if(qzs[3]==5&&qzs[2]==5){//双活二
-		return 50;
-	}
-	if(qzs[3] == 5){//单活二
-		return 10;
-	}
-	if(qzs[3] == 4&& qzs[2]==3 ){//死三跳二
 		return 7;
 	}
-	if(qzs[3] == 4 ){//死三
+	if(qzs[3] == 5){//单活二
+		return 6 ;//+ (sum - 5)/13;
+	}
+	if(qzs[3] == 4&& qzs[2]==3 ){//死三跳二
 		return 5;
 	}
+	if(qzs[3] == 4 ){//死三
+		return 4 ;//+ (sum - 4)/7;
+	}
 	if(qzs[3] == 3){//跳二
-		return 3;
+		return 3 ;//+ (sum - 4)/7;
 	}
 	if(qzs[3] == 2||qzs[3]==1){//死2，活1
 		return 2;
