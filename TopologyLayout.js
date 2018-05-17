@@ -103,18 +103,32 @@ TopologyLayout.prototype.doLayout = function(coll){
 					maxrows = colsrows;
 				}
 			}
-			var minppos = 0;
+			//紧邻父节点最小值
+			var minppos = -1;
+			var minpos = -1;//所有父节点最小值
+			var pc = 0;//如果需要调整，我们就
 			for(var n = 0; node.realParent&&n < node.realParent.length; n++){
-				if(n == 0){
+				if(minpos == -1){
+					minpos = node.realParent[n].currpos;
+				}
+				minpos = Math.min(node.realParent[n].currpos,minpos);
+				if(node.realParent[n].depth - node.depth < -1){
+					continue;
+				}
+				if(minppos == -1){
 					minppos = node.realParent[n].currpos;
 				}
 				minppos = Math.min(node.realParent[n].currpos,minppos);
 			}
 		
 			currpos[i] = Math.max(currpos[i],minppos);
+		
+			if(minppos > 0 && minppos == currpos[i]){
+				pc = (minpos - minppos)*this._hspacing/2;
+			}
 			//计算该节点坐标
 			node.centerX = originx + this._spacing*i;
-			node.centerY = originy + this._hspacing*(maxrows-1)/2 + currpos[i]*this._hspacing;
+			node.centerY = originy + this._hspacing*(maxrows-1)/2 + currpos[i]*this._hspacing + pc;
 			node.currpos = currpos[i];//记录坐标位置
 
 		//	console.log(i + ":::" + maxrows + "----" + currpos[i] + "----" + node.nodeIndex)
