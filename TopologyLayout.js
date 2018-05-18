@@ -76,6 +76,44 @@ TopologyLayout.prototype.doLayout = function(coll){
 	//计算依赖图的坐标
 	for(var i = 0; i < levelNodes.length ;i++){//递归取值，不需要排序。
 		currpos[i] = 0;//完成当前位置初始化
+		//分别排序
+		levelNodes[i].sort((a,b)=>{
+			if(i == 0){
+				return b.maxDepth - a.maxDepth;//顶级节点深度大的优先级高。
+			}
+			//如果不是顶级节点。需要根据当前depth逐步找到对应父级节点计算相关值
+			for(var k = 0; k < i;k++){
+				//计算a值
+				var suma = 0;
+				var counta = 1;
+				for(var m = 0; m < a.parentNode.length; m++){
+					if(a.parentNode[m].depth == k){
+						suma += a.parentNode[m].nodeIndex;
+						counta++;
+					}
+				}
+				var valuea = suma/counta;
+				var sumb = 0;
+				var countb = 1;
+				for(var m = 0; m < b.parentNode.length; m++){
+					if(b.parentNode[m].depth == k){
+						suma += b.parentNode[m].nodeIndex;
+						counta++;
+					}
+				}
+				var valueb = sumb/countb;
+				if(valuea == valueb){
+					continue;
+				}
+				return valuea - valueb;//index越小，排名越靠前
+			}
+			return 0;//如果这里没有返回，肯定是相等。
+		});
+		//给nodexIndex赋值。
+		for(var j = 0; j < levelNodes[i].length; j++){
+			levelNodes[i][j].nodeIndex = j+1;
+			
+		}
 	}
 	//遍历计算坐标位置
 	/**
